@@ -174,3 +174,4 @@ func GetRiwayatStok(c *gin.Context) {
 		"data": riwayats,
 	})
 }
+  
