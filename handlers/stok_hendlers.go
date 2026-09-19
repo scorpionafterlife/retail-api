@@ -10,8 +10,6 @@ import (
 	"retail-api/models"
 )
 
-// ini adalah handler untuk menambahkan stok barang dan mengurangi stok barang, serta menampilkan riwayat stok barang
-
 func StokMasuk(c *gin.Context) {
 	var input struct {
 		BarangID   uint   `json:"barang_id" binding:"required"`
@@ -32,7 +30,7 @@ func StokMasuk(c *gin.Context) {
 		})
 		return
 	}
-	// mencari barang berdasarkan ID yang dikirim dari postman, jika barang tidak ditemukan maka akan mengembalikan error not found
+
 	var barang models.Barang
 
 	if result := config.DB.First(&barang, input.BarangID); result.Error != nil {
@@ -41,15 +39,17 @@ func StokMasuk(c *gin.Context) {
 		})
 		return
 	}
-	// menggunakan transaksi untuk menambahkan stok barang dan membuat riwayat stok masuk, jika terjadi error maka akan mengembalikan error internal server
+
 	err := config.DB.Transaction(func(tx *gorm.DB) error {
 
-		barang.Stok += input.Jumlah
+		// Tambahkan stok
+		barang.Stok += uint(input.Jumlah)
 
 		if err := tx.Save(&barang).Error; err != nil {
 			return err
 		}
 
+		// Simpan riwayat stok
 		riwayat := models.RiwayatStok{
 			BarangID:   input.BarangID,
 			Jenis:      "masuk",
@@ -63,24 +63,24 @@ func StokMasuk(c *gin.Context) {
 
 		return nil
 	})
-	//
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	// mengembalikan response dengan stasus OK
+
 	c.JSON(http.StatusOK, gin.H{
 		"message":       "Stok berhasil ditambahkan",
 		"barang_id":     barang.ID,
-		"nama_barang":   barang.NamaBarang,
+		"nama":          barang.Nama,
 		"jumlah_masuk":  input.Jumlah,
 		"stok_sekarang": barang.Stok,
 	})
 }
 
-// StokKeluar mengurangi stok barang berdasarkan input yang dikirim dari postman, jika barang tidak ditemukan atau stok tidak mencukupi maka akan mengembalikan error not found atau bad request
+// STOK KELUAR
 func StokKeluar(c *gin.Context) {
 	var input struct {
 		BarangID   uint   `json:"barang_id" binding:"required"`
@@ -101,7 +101,7 @@ func StokKeluar(c *gin.Context) {
 		})
 		return
 	}
-	// mencari barang berdasarkan ID yang dikirim dari postman, jika barang tidak ditemukan maka akan mengembalikan error not found
+
 	var barang models.Barang
 
 	if result := config.DB.First(&barang, input.BarangID); result.Error != nil {
@@ -110,34 +110,37 @@ func StokKeluar(c *gin.Context) {
 		})
 		return
 	}
-	// jika stok barang kurang dari jumlah yang dikirim dari postman maka akan mengembalikan error bad request
-	if barang.Stok < input.Jumlah {
+
+	// Cek apakah stok cukup
+	if barang.Stok < uint(input.Jumlah) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":         "Stok tidak mencukupi",
 			"stok_tersedia": barang.Stok,
 		})
 		return
 	}
-	// menggunakan transaksi untuk mengurangi stok barang dan membuat riwayat stok keluar, jika terjadi error maka akan mengambalikan error internal server
+
 	err := config.DB.Transaction(func(tx *gorm.DB) error {
 
-		barang.Stok -= input.Jumlah
+		// Kurangi stok
+		barang.Stok -= uint(input.Jumlah)
 
 		if err := tx.Save(&barang).Error; err != nil {
 			return err
-		}	
+		}
 
+		// Simpan riwayat stok
 		riwayat := models.RiwayatStok{
 			BarangID:   input.BarangID,
 			Jenis:      "keluar",
 			Jumlah:     input.Jumlah,
 			Keterangan: input.Keterangan,
 		}
-		// menyimpan riwayat stok keluar ke database
+
 		if err := tx.Create(&riwayat).Error; err != nil {
 			return err
 		}
-		// nil jika transaksi berhasil
+
 		return nil
 	})
 
@@ -147,21 +150,103 @@ func StokKeluar(c *gin.Context) {
 		})
 		return
 	}
-	// mengembalikan response dengan status OK dan data barang yang stoknya telah dikurangi
+
 	c.JSON(http.StatusOK, gin.H{
 		"message":       "Stok berhasil dikurangi",
 		"barang_id":     barang.ID,
-		"nama_barang":   barang.NamaBarang,
+		"nama":          barang.Nama,
 		"jumlah_keluar": input.Jumlah,
 		"stok_sekarang": barang.Stok,
 	})
 }
+func UpdateStok(c *gin.Context) {
+	id := c.Param("id")
 
-// mengambil data riwayat stok dari database dalam urutan descending berdasarkan ID
+	var input struct {
+		Stok       uint   `json:"stok" binding:"required"`
+		Keterangan string `json:"keterangan"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Data tidak valid",
+		})
+		return
+	}
+
+	var barang models.Barang
+
+	if err := config.DB.First(&barang, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Barang tidak ditemukan",
+		})
+		return
+	}
+
+	stokLama := barang.Stok
+	stokBaru := input.Stok
+
+	// Hitung perubahan stok
+	var jenis string
+	var jumlah uint
+
+	if stokBaru > stokLama {
+		jenis = "masuk"
+		jumlah = stokBaru - stokLama
+	} else if stokBaru < stokLama {
+		jenis = "keluar"
+		jumlah = stokLama - stokBaru
+	}
+
+	err := config.DB.Transaction(func(tx *gorm.DB) error {
+
+		// Update stok barang
+		barang.Stok = stokBaru
+
+		if err := tx.Save(&barang).Error; err != nil {
+			return err
+		}
+
+		// Simpan histori stok 
+		if stokBaru != stokLama {
+			riwayat := models.RiwayatStok{
+				BarangID:   barang.ID,
+				Jenis:      jenis,
+				Jumlah:     int(jumlah),
+				Keterangan: input.Keterangan,
+			}
+
+			if err := tx.Create(&riwayat).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "Stok berhasil diperbarui",
+		"barang_id": barang.ID,
+		"nama":      barang.Nama,
+		"stok_lama": stokLama,
+		"stok_baru": barang.Stok,
+	})
+}
+
+// GET RIWAYAT STOK
 func GetRiwayatStok(c *gin.Context) {
 	var riwayats []models.RiwayatStok
 
-	result := config.DB.Order("id DESC").Find(&riwayats)
+	result := config.DB.
+		Order("id DESC").
+		Find(&riwayats)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -169,9 +254,8 @@ func GetRiwayatStok(c *gin.Context) {
 		})
 		return
 	}
-	// mengembalikan response dengan status OK dan data riwayat stok
+
 	c.JSON(http.StatusOK, gin.H{
 		"data": riwayats,
 	})
 }
-  

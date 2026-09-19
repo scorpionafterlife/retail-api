@@ -1,17 +1,26 @@
 package models
 
-import "time"
+import (
+	"time"
 
-// Penjualan adalah model untuk menyimpan data penjualan
+	"gorm.io/gorm"
+)
+
 type Penjualan struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	Tanggal   time.Time `gorm:"not null" json:"tanggal"`
-	Total     float64   `gorm:"not null;default:0" json:"total"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID uint `gorm:"primaryKey" json:"id"`
+
+	KodeInvoice string         `json:"kode_invoice"`
+	NamaPembeli string         `json:"nama_pembeli"`
+	Subtotal    float64        `json:"subtotal"`
+	KodeDiskon  *string        `json:"kode_diskon"`
+	Diskon      float64        `json:"diskon"`
+	Total       float64        `json:"total"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	CreatedBy   string         `json:"created_by"`
 }
 
-// TableName mengembalikan nama tabel untuk model penjualan
 func (Penjualan) TableName() string {
 	return "penjualans"
 }

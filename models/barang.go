@@ -1,17 +1,27 @@
 package models
 
-import "time"
+import (
+	"time"
 
-//tabel barang untuk menyimpan data barang
+	"gorm.io/gorm"
+)
+
 type Barang struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	NamaBarang string    `gorm:"column:nama_barang;not null" json:"nama_barang"`
-	Harga      float64   `gorm:"not null" json:"harga"`
-	Stok       int       `gorm:"not null;default:0" json:"stok"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         uint           `gorm:"primaryKey" json:"id"`
+	KodeBarang string         `json:"kode_barang"`
+	Nama       string         `json:"nama"`
+	NamaBarang string         `json:"nama_barang"`
+	HargaPokok float64        `json:"harga_pokok"`
+	HargaJual  float64        `json:"harga_jual"`
+	Harga      float64        `json:"harga"`
+	TipeBarang string         `json:"tipe_barang"`
+	Stok       uint           `json:"stok"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+	CreatedBy  string         `json:"created_by"`
 }
-// Tablename nama table di database mysql
+
 func (Barang) TableName() string {
 	return "barangs"
 }
