@@ -16,7 +16,7 @@ func CreatePenjualan(c *gin.Context) {
 		KodeInvoice string `json:"kode_invoice" binding:"required"`
 		NamaPembeli string `json:"nama_pembeli"`
 		CreatedBy   string `json:"created_by"`
-	}
+	}	
 
 	// Ambil data JSON dari Postman
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -115,6 +115,7 @@ func ApplyDiskon(c *gin.Context) {
 	err = config.DB.
 		Table("item_penjualan").
 		Where("id_penjualan = ?", penjualan.ID).
+		Where("deleted_at IS NULL").
 		Select("COALESCE(SUM(subtotal), 0)").
 		Scan(&subtotal).Error
 
@@ -271,7 +272,7 @@ func GetDetailPenjualan(c *gin.Context) {
 		`).
 		Joins("JOIN barangs AS b ON b.id = ip.id_barang").
 		Where("ip.id_penjualan = ?", penjualan.ID).
-		Where("ip.deleted_at IS NULL").
+		Where("ip.deleted_at IS NULL").																																																					
 		Where("b.deleted_at IS NULL").
 		Scan(&items).Error
 
@@ -301,6 +302,7 @@ func GetDetailPenjualan(c *gin.Context) {
 	})
 }
 
+// GET SEMUA PENJUALAN
 func GetPenjualan(c *gin.Context) {
 
 	var penjualans []models.Penjualan

@@ -20,7 +20,6 @@ type Penjualan struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 	CreatedBy   string         `json:"created_by"`
 }
-
 func (Penjualan) TableName() string {
 	return "penjualans"
 }

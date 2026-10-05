@@ -15,7 +15,7 @@ func main() {
 
 	r := gin.Default()
 
-	// barang	
+	// barang
 	r.GET("/barang", handlers.GetBarang)
 	r.GET("/barang/:id", handlers.GetBarangByID)
 	r.POST("/barang", handlers.CreateBarang)

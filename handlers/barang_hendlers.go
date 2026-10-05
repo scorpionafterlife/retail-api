@@ -33,7 +33,7 @@ func GetBarang(c *gin.Context) {
 }
 
 // GET /barang/:id
-func GetBarangByID(c *gin.Context) {
+func GetBarangByID(c *gin.Context) {	
 	id := c.Param("id")
 
 	var barang models.Barang
